@@ -1,21 +1,17 @@
-import {
-  ImageBackground,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
-import { useCallback, useEffect, useState } from "react";
+import { StatusBar, StyleSheet} from "react-native";
+import { NavigationContainer } from "@react-navigation/native";
+import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { useFonts } from "expo-font";
+import { useCallback } from "react";
 import SplashScreen from "react-native-splash-screen";
-import { AntDesign, Entypo, Feather, Ionicons, MaterialIcons } from "@expo/vector-icons";
-import { SIZES } from "../constants";
-import { ScrollView } from "react-native";
-import axios from "axios";
 import Weather from "./Weather";
+import ForecastScreen from "./ForecastScreen";
+import LocationScreen from "./LocationScreen";
+import SettingsScreen from "./SettingsScreen";
+import ExpoStatusBar from "expo-status-bar/build/ExpoStatusBar";
 
-const Home = () => {
-  
+
+export default function Home() {
   const [fontsloaded] = useFonts({
     bold: require("../assets/fonts/DMSans-Bold.ttf"),
     medium: require("../assets/fonts/DMSans-Medium.ttf"),
@@ -29,15 +25,36 @@ const Home = () => {
   if (!fontsloaded) {
     return null;
   }
- 
-  
-  
+  const Stack = createNativeStackNavigator();
   return (
-    <Weather/>
+    <NavigationContainer>
+      <StatusBar backgroundColor="transparent"/>
+        <Stack.Navigator>
+        
+          <Stack.Screen
+            name="Weather"
+            component={Weather}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="ForecastScreen"
+            component={ForecastScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="LocationScreen"
+            component={LocationScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="SettingsScreen"
+            component={SettingsScreen}
+            options={{ headerShown: false }}
+          />
+        </Stack.Navigator>
+    </NavigationContainer>
   );
-};
-
-export default Home;
+}
 
 const styles = StyleSheet.create({
   

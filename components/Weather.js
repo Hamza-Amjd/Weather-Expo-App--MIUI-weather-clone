@@ -1,203 +1,185 @@
 import {
   FlatList,
+  Image,
   ImageBackground,
+  RefreshControl,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
-import { useEffect, useState } from "react";
-import { Entypo, Ionicons, MaterialIcons } from "@expo/vector-icons";
+import { useCallback,  useEffect, useState } from "react";
+import {
+  AntDesign,
+  Entypo,
+  FontAwesome5,
+  Ionicons,
+  MaterialIcons,
+} from "@expo/vector-icons";
 import { SIZES } from "../constants";
 import { ScrollView } from "react-native";
 import axios from "axios";
-import WeatherIcon from "./WeatherIcon";
 import * as Location from "expo-location";
+import { useNavigation } from "@react-navigation/native";
+import { weatherIcons } from "../constants/theme";
+import Clouds from "../assets/images/clouds.jpg";
+import Animated,{useAnimatedRef,useAnimatedScrollHandler,useSharedValue,useAnimatedStyle,interpolate, Extrapolate} from 'react-native-reanimated';
 
 const Weather = () => {
-  const [data, setData] = useState({
-    current_observation: {
-      astronomy: { sunrise: "5:35 AM", sunset: "6:33 PM" },
-      atmosphere: { humidity: 85, pressure: 1001, visibility: 1.99 },
-      condition: { temperature: 76, text: "Fair" },
-      pubDate: 1693011351,
-      wind: { chill: 78, direction: "NNE", speed: 10 },
-    },
-    forecasts: [
-      {
-        code: 31,
-        date: 1693065600,
-        day: "Sat",
-        high: 92,
-        low: 78,
-        text: "Clear",
-      },
-      {
-        code: 34,
-        date: 1693152000,
-        day: "Sun",
-        high: 94,
-        low: 75,
-        text: "Mostly Sunny",
-      },
-      {
-        code: 30,
-        date: 1693238400,
-        day: "Mon",
-        high: 93,
-        low: 77,
-        text: "Partly Cloudy",
-      },
-      {
-        code: 4,
-        date: 1693324800,
-        day: "Tue",
-        high: 96,
-        low: 80,
-        text: "Thunderstorms",
-      },
-      {
-        code: 32,
-        date: 1693411200,
-        day: "Wed",
-        high: 98,
-        low: 81,
-        text: "Sunny",
-      },
-      {
-        code: 36,
-        date: 1693497600,
-        day: "Thu",
-        high: 102,
-        low: 82,
-        text: "Hot",
-      },
-      {
-        code: 36,
-        date: 1693584000,
-        day: "Fri",
-        high: 105,
-        low: 84,
-        text: "Hot",
-      },
-      {
-        code: 36,
-        date: 1693670400,
-        day: "Sat",
-        high: 104,
-        low: 83,
-        text: "Hot",
-      },
-      {
-        code: 36,
-        date: 1693756800,
-        day: "Sun",
-        high: 103,
-        low: 81,
-        text: "Hot",
-      },
-      {
-        code: 4,
-        date: 1693843200,
-        day: "Mon",
-        high: 101,
-        low: 79,
-        text: "Thunderstorms",
-      },
-      {
-        code: 4,
-        date: 1693929600,
-        day: "Tue",
-        high: 97,
-        low: 78,
-        text: "Thunderstorms",
-      },
-    ],
-    location: {
-      city: "Lahore",
-      country: "Pakistan",
-      lat: 31.54991,
-      long: 74.327301,
-      timezone_id: "Asia/Karachi",
-      woeid: 2211177,
-    },
-  });
-  const [condition, setCondition] = useState([]);
+  const navigation = useNavigation();
+  const [condition, setCondition] = useState(); 
   const [forecasts, setForecasts] = useState([]);
-  const [location, setLocation] = useState([]);
-  
+  const [hourlyForecasts, setHourlyForecasts] = useState([]);
+  const [locationKey, setLocationKey] = useState(260622);
+  const [locationData, setLocationData] = useState([]);
+
   const fetchConditions = async () => {
-    
     try {
-      
-      const response = await axios.get(`http://dataservice.accuweather.com/currentconditions/v1/259794?apikey=YBBbKyRipsAsK6qezf19HZ3MpO81qieb&language=en-us&details=true`).then((response)=>{
-
-        setCondition(JSON.stringify(response.data));
-        console.log(condition)
-        console.log(condition[0]?.Temperature)
-      })
-
+      await axios
+        .get(
+          `http://dataservice.accuweather.com/currentconditions/v1/${locationKey}?apikey=YBBbKyRipsAsK6qezf19HZ3MpO81qieb&language=en-us&details=true`
+        )
+        .then((response) => {
+          const conditions = response.data[0];
+          setCondition(conditions);
+        });
     } catch (error) {
       console.log(error);
     }
   };
-  
+  const fetchHourlyforecast = async () => {
+    try {
+      await axios
+        .get(
+          `http://dataservice.accuweather.com/forecasts/v1/hourly/12hour/${locationKey}?apikey=YBBbKyRipsAsK6qezf19HZ3MpO81qieb&language=en-us&details=false&metric=false`
+        )
+        .then((response) => {
+          const forcast = response.data;
+          setHourlyForecasts(forcast);
+        });
+    } catch (error) {
+      console.log(error);
+    }
+  };
+  const fetchforecast = async () => {
+    try {
+      await axios
+        .get(
+          `http://dataservice.accuweather.com/forecasts/v1/daily/5day/${locationKey}?apikey=YBBbKyRipsAsK6qezf19HZ3MpO81qieb&language=en-us&details=true&metric=false`
+        )
+        .then((response) => {
+          const forcasts = response.data;
+          setForecasts(forcasts.DailyForecasts);
+        });
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  function getDirection(heading) {
+    let directions = [
+      "North",
+      "North-East",
+      "East",
+      "South-East",
+      "South",
+      "South-West",
+      "West",
+      "North-West",
+    ];
+    let index = Math.round(heading / 8 / 5, 625);
+    return directions[index];
+  }
+  function fahrenheitToCelsius(val) {
+    return Math.round((val - 32) / 1.8);
+  }
   const fetchLocation = async () => {
-    
     try {
-      const response = await axios.get(`http://dataservice.accuweather.com/locations/v1/cities/search?apikey=YBBbKyRipsAsK6qezf19HZ3MpO81qieb&q=lahore&language=en-us&details=false&offset=1`);
-      // setData(response.data);
-      console.log(response.json);
-      setLocation(response.data[0])
-      
-      
-      setCondition(data?.current_observation.condition);
-      setForecasts(data?.forecasts);
+      console.log(locationKey)
+      const response = await axios.get(
+        `http://dataservice.accuweather.com/locations/v1/${locationKey}?apikey=YBBbKyRipsAsK6qezf19HZ3MpO81qieb&language=en-us&details=false`
+      );
+      const location = response.data;
+      setLocationData(location);
     } catch (error) {
       console.log(error);
     }
   };
-  const handleToday = (day) => {
-    const date = new Date();
-    var days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const handleToday = (date) => {
+    let day = new Date(date).getDay();
+
+    const presentday = new Date().getDay();
+    var days = [
+      "Sunday",
+      "Monday",
+      "Tuesday",
+      "Wednesday",
+      "Thursday",
+      "Friday",
+      "Saturday",
+    ];
     switch (day) {
-      case days[date.getDay()]:
+      case presentday:
         return "Today";
         break;
-      case days[(date.getDay() + 1)%7]:
+      case (presentday + 1) % 7:
         return "Tomorrow";
         break;
 
       default:
-        return day;
+        return days[day];
     }
   };
-  const getLocation=async()=>{
-    let {status} = await Location.getForegroundPermissionsAsync()
-    if(status !== 'granted')return;
-    let currentLocation=Location.getCurrentPositionAsync()
-    console.log(currentLocation)
+  const handleTime = (Time) => {
+    const date = new Date(Time);
+    return date.getHours() + ":" + date.getMinutes();
+  };
+  const getLocation = async () => {
+    let { status } = await Location.getForegroundPermissionsAsync();
+    if (status !== "granted") return;
+    let currentLocation = Location.getCurrentPositionAsync();
+    console.log(currentLocation);
+  };
+  const fetchData=()=>{
+    fetchLocation();
+    fetchConditions();
+    fetchforecast();
+    fetchHourlyforecast();
   }
   useEffect(() => {
-    // setCondition(data?.current_observation.condition);
-    // setForecasts(data?.forecasts);
-    // getLocation()
-    // fetchdata()
-    fetchConditions()
-    console.log(location?.key)
-  }, []);
+    // fetchData()
+  }, [locationKey]);
+  const [refreshing, setRefreshing] = useState(false);
 
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    fetchData()
+    setRefreshing(false);
+    
+  }, []);
+  const translateY = useSharedValue(0);
+  const scrollHandler = useAnimatedScrollHandler((e)=>{
+  })
+  const reanimatedStyle = useAnimatedStyle(()=>{
+    return {
+    }
+  },[])
+  
   return (
     <ImageBackground
       style={styles.background}
-      source={require("../assets/images/clouds.jpg")}
+      source={Clouds}
     >
       <View style={styles.appbar}>
-        <TouchableOpacity>
-          <Entypo name="plus" size={40} color="white" />
+        <TouchableOpacity
+          onPress={() =>
+            navigation.navigate("LocationScreen",{setLocationKey})
+          }
+        >
+          <Entypo name="plus" size={35} color="white" />
         </TouchableOpacity>
-        <Text style={styles.location}>Baghbanpura</Text>
-        <TouchableOpacity>
+        <Text style={styles.location}>{locationData?.LocalizedName}</Text>
+        <TouchableOpacity onPress={() => navigation.navigate("SettingsScreen")}>
           <Ionicons
             name="settings-outline"
             size={30}
@@ -206,38 +188,61 @@ const Weather = () => {
           />
         </TouchableOpacity>
       </View>
-      <ScrollView
-        contentContainerStyle={{ flexGrow: 1, paddingBottom: 200 }}
+
+      <Animated.ScrollView
+      onScroll={scrollHandler}
+      scrollEventThrottle={16}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />} 
+        contentContainerStyle={{ flexGrow: 1 }}
         showsVerticalScrollIndicator={false}
       >
-        <View style={{ justifyContent: "center", alignItems: "center" }}>
-          <Text style={styles.temp}>{}°</Text>
+
+        <Animated.View style={[{ justifyContent: "center", alignItems: "center",opacity:1},reanimatedStyle]}>
+          <Text style={styles.temp}>
+            {Math.round(condition?.Temperature.Metric.Value)}°
+          </Text>
           <View style={{ flexDirection: "row" }}>
-            <Text style={styles.maintxt(20)}>{condition?.text}</Text>
-            <Text style={styles.maintxt(20)}>
-              {condition?.temperature - 5}° /{condition?.temperature + 5}°
+            <Text style={styles.maintxt(20)}>{condition?.WeatherText}</Text>
+            <Text style={styles.maintxt(18)}>
+              {Math.round(condition?.Temperature.Metric.Value) + 3}° /
+              {Math.round(condition?.Temperature.Metric.Value) - 3}°
             </Text>
           </View>
+
           <View style={styles.airquality}>
             <Ionicons
               name="leaf"
               size={15}
               color="white"
-              style={{ padding: 5 ,paddingRight:-7}}
+              style={{ padding: 5, paddingRight: -7 }}
             />
             <Text style={styles.maintxt(14)}>AQI 47</Text>
           </View>
-        </View>
+        </Animated.View>
+
         <View style={styles.forecastdetail(290, "97%")}>
           <View
             style={{
               padding: SIZES.large,
               flexDirection: "row",
               justifyContent: "space-between",
-              alignItems: "baseline",
+              alignItems: "center",
             }}
           >
-            <Text style={styles.detailstext}>5 Days forecast</Text>
+            <View style={{ flexDirection: "row" }}>
+              <FontAwesome5
+                name="calendar-alt"
+                size={10}
+                color="white"
+                style={{
+                  backgroundColor: "rgba(1,1,1,0.2)",
+                  padding: 7,
+                  borderRadius: 25,
+                }}
+              />
+              <Text style={styles.dimtxt}> 5-Day forecast</Text>
+            </View>
             <TouchableOpacity
               style={{
                 flexDirection: "row",
@@ -245,22 +250,24 @@ const Weather = () => {
                 alignItems: "baseline",
               }}
             >
-              <Text style={{ color: "white" }}>More details</Text>
+              <Text style={{ color: "rgba(252, 252, 252,0.7)" }}>
+                More details
+              </Text>
               <MaterialIcons
                 name="arrow-right"
                 size={20}
-                color="white"
+                color="rgba(252, 252, 252,0.7)"
                 style={{ top: 5 }}
               />
             </TouchableOpacity>
           </View>
-          <ScrollView style={{}}>
+          <ScrollView>
             {forecasts?.map((item) => (
               <View
-              key={item.date}
+                key={item.Date}
                 style={{
                   paddingHorizontal: SIZES.xLarge,
-                  paddingVertical: 5,
+                  paddingVertical: 12,
                   flexDirection: "row",
                   justifyContent: "space-between",
                   alignItems: "center",
@@ -268,9 +275,13 @@ const Weather = () => {
                 }}
               >
                 <View style={{ flexDirection: "row" }}>
-                  <WeatherIcon />
+                  <Image
+                    style={{ width: 30, height: 30}}
+                    source={weatherIcons[condition?.WeatherText]}
+                  />
                   <Text style={styles.detailstext}>
-                    {handleToday(item.day)}
+                    {" "}
+                    {handleToday(item.Date)} 
                   </Text>
                 </View>
                 <TouchableOpacity
@@ -280,19 +291,80 @@ const Weather = () => {
                     alignItems: "baseline",
                   }}
                 >
-                  <Text style={{ color: "white" }}>
-                    {item.high}° /{item.low}°{" "}
+                  <Text
+                    style={{ color: "white", fontWeight: 700, fontSize: 16 }}
+                  >
+                    {fahrenheitToCelsius(item.Temperature.Maximum.Value)}°/
+                    {fahrenheitToCelsius(item.Temperature.Minimum.Value)}°
                   </Text>
                 </TouchableOpacity>
               </View>
             ))}
           </ScrollView>
-          <TouchableOpacity style={styles.btn}>
+          <TouchableOpacity
+            style={styles.btn}
+            onPress={() => navigation.navigate("ForecastScreen", { forecasts })}
+          >
             <Text style={styles.maintxt(20)}>5 Days Forecast</Text>
           </TouchableOpacity>
         </View>
         <View>
-          <View style={styles.details(230, "97%")}></View>
+          <View style={styles.forecastdetail(230, "97%")}>
+            <View style={{ flexDirection: "row", padding: 15 }}>
+              <AntDesign
+                name="clockcircle"
+                size={10}
+                color="white"
+                style={{
+                  backgroundColor: "rgba(1,1,1,0.2)",
+                  padding: 7,
+                  borderRadius: 25,
+                }}
+              />
+              <Text style={styles.dimtxt}> 24-Hours Forecast</Text>
+            </View>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              {hourlyForecasts?.map((item) => (
+                <View
+                  key={item.DateTime}
+                  style={{
+                    paddingHorizontal: 15,
+                    flexDirection: "row",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    overflow: "hidden",
+                  }}
+                >
+                  <View
+                    style={{ justifyContent: "center", alignItems: "center" }}
+                  >
+                    <Text
+                      style={{
+                        color: "white",
+                        fontWeight: 700,
+                        fontSize: 20,
+                        paddingBottom: 70,
+                        paddingLeft:5
+                      }}
+                    >
+                      {fahrenheitToCelsius(item.Temperature.Value)}°
+                    </Text>
+                    <Image
+                    style={{ width: 30, height: 30, bottom: 5 }}
+                    source={weatherIcons[condition?.WeatherText]}
+                  />
+                    <Text style={{ color: "white", fontSize: 12 }}>
+                      {" "}
+                      {new Date(item.DateTime).getHours() +
+                        ":" +
+                        new Date(item.DateTime).getMinutes()}
+                      {"0"}
+                    </Text>
+                  </View>
+                </View>
+              ))}
+            </ScrollView>
+          </View>
           <View style={{ flexDirection: "row" }}>
             <View style={{ flex: 1 }}>
               <View style={styles.details(130, "97%")}>
@@ -303,66 +375,72 @@ const Weather = () => {
                     top: 10,
                   }}
                 >
-                  <Text style={styles.maintxt(20)}>
-                    {data?.current_observation.wind.speed}km/h
-                  </Text>
+                  <View>
+                    <Text style={styles.maintxt(18)}>
+                      {getDirection(condition?.Wind.Direction.Degrees)}
+                    </Text>
+                    <Text style={styles.maintxt(20)}>
+                      {condition?.Wind.Speed.Metric.Value} km/h
+                    </Text>
+                  </View>
                   <Ionicons
                     name="ios-compass-outline"
-                    size={90}
+                    size={80}
                     color="white"
                   />
                 </View>
               </View>
               <View style={styles.details(130, "97%")}>
-                <ImageBackground
-                  style={{ left: 20, flex: 1, justifyContent: "center" }}
-                  source={require("../assets/images/sunpath.png")}
-                >
-                  <Text style={styles.dimtxt}>
-                    {data?.current_observation.astronomy.sunrise} Sunrise
-                  </Text>
-                  <Text style={styles.dimtxt}>
-                    {data?.current_observation.astronomy.sunset} Sunset
-                  </Text>
-                </ImageBackground>
+                <View style={{justifyContent:"space-evenly",alignItems:"center",flexDirection:"row"}}>
+                  <View>  
+                    <Text style={styles.dimtxt}>
+                      {handleTime(forecasts[0]?.Sun.Rise)} Sunrise
+                    </Text>
+                    <Text style={styles.dimtxt}>
+                      {handleTime(forecasts[0]?.Sun.Set)} Sunset
+                    </Text>
+                  </View>
+                  <Image
+                    style={{ width: 90, height: 90}}
+                    source={require('../assets/images/sunpath.png')}
+                  />
+                </View>
               </View>
             </View>
             <View style={styles.details(270, "47%")}>
               <View style={styles.humidity}>
                 <Text style={styles.maintxt(16)}>Humidity</Text>
                 <Text style={styles.maintxt(16)}>
-                  {data?.current_observation.atmosphere.humidity}%
+                  {condition?.RelativeHumidity}%
                 </Text>
               </View>
               <View style={styles.humidity}>
                 <Text style={styles.maintxt(16)}>Feels Like</Text>
                 <Text style={styles.maintxt(16)}>
-                  {condition?.temperature}°
+                  {Math.round(condition?.RealFeelTemperature.Metric.Value)}°
                 </Text>
               </View>
               <View style={styles.humidity}>
                 <Text style={styles.maintxt(16)}>UV</Text>
-                <Text style={styles.maintxt(16)}>
-                  {data?.current_observation.atmosphere.visibility}%
-                </Text>
+                <Text style={styles.maintxt(16)}>{condition?.UVIndex}</Text>
               </View>
               <View style={styles.humidity}>
                 <Text style={styles.maintxt(16)}>Pressure</Text>
                 <Text style={styles.maintxt(16)}>
-                    {data?.current_observation.atmosphere.pressure}mbar
+                  {condition?.Pressure.Metric.Value} mbar
                 </Text>
               </View>
               <View style={styles.humidity}>
                 <Text style={styles.maintxt(16)}>Chance of Rain</Text>
                 <Text style={styles.maintxt(16)}>
-                  {data?.current_observation.atmosphere.humidity}%
+                  {forecasts[0]?.Day.RainProbability}%
                 </Text>
               </View>
             </View>
           </View>
-            <View style={styles.details(100, "97%")}></View>
+          {/* <View style={styles.details(100, "97%")}></View>s */}
         </View>
-      </ScrollView>
+      </Animated.ScrollView>
     </ImageBackground>
   );
 };
@@ -375,14 +453,15 @@ const styles = StyleSheet.create({
   },
   appbar: {
     top: 30,
-    padding: SIZES.large,
+    padding: SIZES.medium,
     flexDirection: "row",
     justifyContent: "space-between",
+    marginBottom: 20,
   },
   temp: {
-    marginTop: 130,
-    fontFamily: "bold",
-    fontSize: 100,
+    marginTop: 110,
+    fontWeight: "500",
+    fontSize: 120,
     color: "white",
     left: 20,
   },
@@ -396,37 +475,36 @@ const styles = StyleSheet.create({
   maintxt: (fontsize) => ({
     fontFamily: "medium",
     fontSize: fontsize,
+    fontWeight: 800,
     color: "white",
     padding: 5,
     alignSelf: "center",
   }),
   dimtxt: {
     fontFamily: "medium",
-    fontSize: 14,
+    fontSize: 16,
     color: "rgba(252, 252, 252,0.7)",
-    padding: 5,
-    right: 40,
+    top: 3,
   },
   airquality: {
     borderColor: "white",
     borderRadius: SIZES.medium,
     flexDirection: "row",
     backgroundColor: "rgba(245, 247, 247, 0.7)",
+    marginBottom: 120,
   },
   forecastdetail: (height, width) => ({
-    top: 130,
     height: height,
     width: width,
     borderRadius: 20,
-    backgroundColor: "rgba(114, 216, 219, 0.4)",
+    backgroundColor: "rgba(88, 89, 89, 0.5)",
     margin: 5,
   }),
   details: (height, width) => ({
-    top: 130,
     height: height,
     width: width,
     borderRadius: 20,
-    backgroundColor: "rgba(114, 216, 219, 0.4)",
+    backgroundColor: "rgba(88, 89, 89, 0.5)",
     margin: 5,
     alignItems: "center",
     justifyContent: "center",
@@ -443,7 +521,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderRadius: 30,
-    backgroundColor: "rgba(114, 216, 219,0.4)",
+    backgroundColor: "rgba(1,1,1,0.2)",
     margin: 5,
     bottom: 5,
   },
@@ -453,6 +531,6 @@ const styles = StyleSheet.create({
     borderBottomWidth: 0.3,
     borderColor: "white",
     width: "97%",
-    paddingVertical:7
+    paddingVertical: 7,
   },
 });
